@@ -1,0 +1,12 @@
+CHIP DMux
+{
+    IN in, sel;
+    OUT a, b;
+
+    PARTS:
+    And(a = in, b = sel, out = b);
+
+    Not(in = sel, out = notS);
+
+    And(a = notS, b = in, out = a);
+}
