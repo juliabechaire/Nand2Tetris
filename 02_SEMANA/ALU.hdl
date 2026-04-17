@@ -1,0 +1,41 @@
+CHIP ALU {
+    IN  
+        x[16], y[16],  // 16-bit inputs        
+        zx, // zero the x input?
+        nx, // negate the x input?
+        zy, // zero the y input?
+        ny, // negate the y input?
+        f,  // compute (out = x + y) or (out = x & y)?
+        no; // negate the out output?
+    OUT 
+        out[16], // 16-bit output
+        zr,      // if (out == 0) equals 1, else 0
+        ng;      // if (out < 0)  equals 1, else 0
+
+    PARTS:
+
+    Mux16(a= x, b= false, sel= zx, out= x1); //decide se sai o x zerado
+    Not16(in= x1, out= notA);
+    Mux16(a= x1, b= notA, sel= nx, out= x2); //decide se sai o x negado
+
+    Mux16(a= y, b= false, sel= zy, out= y1); //decide o y
+    Not16(in= y1, out= notB);
+    Mux16(a= y1, b= notB, sel= ny, out= y2);
+    
+
+    Add16(a= x2, b= y2, out= soma); //soma
+    And16(a= x2, b= y2, out= and); //AND
+    Mux16(a= and, b= soma, sel= f, out= res); //decide 
+
+    Not16(in= res, out= notRes);
+    Mux16(a= res, b= notRes, sel= no, out= out, 
+          out[15]=ng,        // Conecta o bit 15 na saída ng do chip
+          out[0..7]=low,     // Cria o nome interno 'low' para os primeiros 8 bits
+          out[8..15]=high);  // Cria o nome interno 'high' para os últimos 8 bits); //decide se inverte o resultado
+    
+    Or8Way(in=low, out=orLow); //se tiver algum 1, a saida é 1
+    Or8Way(in=high, out=orHigh);
+    
+    Or(a=orLow, b=orHigh, out=notZr); // Se houver qualquer bit 1, notZr será 1
+    Not(in=notZr, out=zr);            // Inverte para que zr=1 apenas se tudo for 0
+}
