@@ -1,0 +1,23 @@
+CHIP RAM8 {
+    IN in[16], load, address[3];
+    OUT out[16];
+
+    PARTS:
+    
+    DMux8Way(in= load, sel= address, a= load0, b= load1, c= load2, 
+    d= load3, e= load4, f= load5, g= load6, h= load7); //decide qual registrador será escolhido
+
+    Register(in= in, load= load0, out= registrador0);
+    Register(in= in, load= load1, out= registrador1);
+    Register(in= in, load= load2, out= registrador2);
+    Register(in= in, load= load3, out= registrador3);
+    Register(in= in, load= load4, out= registrador4);
+    Register(in= in, load= load5, out= registrador5);
+    Register(in= in, load= load6, out= registrador6);
+    Register(in= in, load= load7, out= registrador7);
+
+    Mux8Way16(a= registrador0, b= registrador1, c= registrador2, 
+    d= registrador3, e= registrador4, f= registrador5, g= registrador6, 
+    h= registrador7, sel= address, out= out);
+   
+}

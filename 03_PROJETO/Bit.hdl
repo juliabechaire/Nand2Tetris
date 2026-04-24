@@ -1,0 +1,8 @@
+CHIP Bit {
+    IN in, load;
+    OUT out;
+
+    PARTS:
+    Mux(a= guardado, b= in, sel= load, out= valor); ///decide se o valor vai ser o antigo ou o novo
+    DFF(in= valor, out= guardado, out = out); ///libera o valor guardado e envia o in
+}
