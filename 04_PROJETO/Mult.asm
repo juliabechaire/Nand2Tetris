@@ -7,36 +7,46 @@
 // M: representa o valor que está na RAM, O M é totalmente dependente do A. Você não consegue mexer no M sem antes usar o @.
 // @: registrador de "apontamento"
 
-// 1. Zera o resultado final
+// Zera o resultado final
     @R2
     M=0
 
-// 2. Pega o valor de R1 para usar como contador
-    @R1
-    D=M
-    @count
-    M=D
+// CONT começa em 0
+    @cont
+    M=0
 
-(LOOP)
-// 3. Checa se o contador é 0 ou menor. Se for, acaba.
-    @count
-    D=M
-    @END
-    D;JLE    // Se count <= 0 pula para o fim 
-
-// 4. Soma R0 ao valor atual de R2
+//VERIFICAÇÃO: se um dos termos == 0 pula pro final
     @R0
     D=M
+    @END
+    D;JEQ
+
+    @R1
+    D=M
+    @END
+    D;JEQ
+
+(LOOP)
+    @cont
+    D=M //D vai armazenar o valor de i
+    @R0
+    D=D-M //D agora vai armazenar a diferença
+    @END
+    D;JEQ    // Se (CONT-R1) == 0 pula para o fim  
+
+// Soma R1 ao valor atual de R2
+    @R1
+    D=M //D guarda valor de R1
     @R2
-    M=D+M
+    M=M+D //R2 guarda valor da soma parcial
 
-// 5. Diminui 1 do contador
-    @count
-    M=M-1
+// i++
+    @cont
+    M=M+1
 
-// 6. Volta para o início do loop para testar de novo
+// Volta para o início do loop para testar de novo
     @LOOP
-    0;JMP
+    0;JMP //pula pra onde esta a etiqueta
 
 (END)
     @END
