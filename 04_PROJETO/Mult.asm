@@ -7,15 +7,12 @@
 // M: representa o valor que está na RAM, O M é totalmente dependente do A. Você não consegue mexer no M sem antes usar o @.
 // @: registrador de "apontamento"
 
-// Zera o resultado final
     @R2
     M=0
 
-// CONT começa em 0
     @cont
     M=0
 
-//VERIFICAÇÃO: se um dos termos == 0 pula pro final
     @R0
     D=M
     @END
@@ -28,25 +25,22 @@
 
 (LOOP)
     @cont
-    D=M //D vai armazenar o valor de i
+    D=M
     @R0
-    D=D-M //D agora vai armazenar a diferença
+    D=D-M
     @END
-    D;JEQ    // Se (CONT-R1) == 0 pula para o fim  
+    D;JEQ
 
-// Soma R1 ao valor atual de R2
     @R1
-    D=M //D guarda valor de R1
+    D=M
     @R2
-    M=M+D //R2 guarda valor da soma parcial
+    M=M+D
 
-// i++
     @cont
     M=M+1
 
-// Volta para o início do loop para testar de novo
     @LOOP
-    0;JMP //pula pra onde esta a etiqueta
+    0;JMP
 
 (END)
     @END
