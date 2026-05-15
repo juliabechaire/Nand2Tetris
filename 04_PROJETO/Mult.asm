@@ -34,7 +34,7 @@
     @R1
     D=M
     @R2
-    M=M+D
+    M=D+M
 
     @cont
     M=M+1
