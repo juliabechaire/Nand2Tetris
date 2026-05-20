@@ -1,0 +1,47 @@
+CHIP CPU {    
+    // "decode" which instruction to execute
+      Or(a=instruction[15], b=false, out=isCInstruction); // if(instruction[15])  isCInstruction=true;
+      Not(in=instruction[15],        out=isAInstruction); // if(!instruction[15]) isAInstruction=true;    
+      
+      And(a=isCInstruction, b=instruction[5], out=isCWriteA);               // isCInstruction && dest==A
+      Or(a=isAInstruction, b=isCWriteA, out=loadA);                         // writeA if (A-instr || (isCInstruction && dest==A))
+      Mux16(a=instruction, b=outALU, sel=isCWriteA, out=inAReg);
+      ARegister(in=inAReg, load=loadA, out=outAreg, out[0..14]=addressM);   //outAreg==addressM 
+  
+      And(a=isCInstruction, b=instruction[4], out=loadD);                   // isCInstruction && dest==D
+      DRegister(in=outALU, load=loadD, out=outDReg);
+      
+      Mux16(a=outAreg, b=inM, sel=instruction[12], out=outAorM);            // A or M, sel=a (a bit selects A register)
+      
+      ALU(
+          x=outDReg,
+          y=outAorM,
+          zx=instruction[11],   // c1
+          nx=instruction[10],   // c2
+          zy=instruction[9],    // c3
+          ny=instruction[8],    // c4
+          f =instruction[7],    // c5
+          no=instruction[6],    // c6
+          out=outALU,
+          out=outM,
+          zr=isZeroOut,
+          ng=isNegOut
+        );
+          
+      // Set out flags and ProgramCounter
+      Not(in=isNegOut, out=isNonNeg);
+      Not(in=isZeroOut, out=isNonZero);
+      And(a=isNonNeg, b=isNonZero, out=isPositive); // is positive? !zero && !negative
+      
+      And(a=isCInstruction, b=instruction[3], out=writeM);  // write M? isCInstruction && dest==M
+      
+      And(a=isPositive, b=instruction[0], out=JGT);
+      And(a=isZeroOut, b=instruction[1], out=JEQ);
+      And(a=isNegOut, b=instruction[2], out=JLT);
+          
+      Or(a=JEQ, b=JLT, out=JLE);
+      Or(a=JLE, b=JGT, out=jumpToA);                  // is jump?
+      And(a=isCInstruction, b=jumpToA, out=loadPC);   // loadPC? if(isCInstruction && jump)
+      Not(in=loadPC, out=PCinc);
+      PC(in=outAreg, inc=PCinc, load=loadPC, reset=reset, out[0..14]=pc);
+}
