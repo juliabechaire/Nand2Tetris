@@ -1,47 +1,59 @@
-CHIP CPU {    
-    // "decode" which instruction to execute
-      Or(a=instruction[15], b=false, out=isCInstruction); // if(instruction[15])  isCInstruction=true;
-      Not(in=instruction[15],        out=isAInstruction); // if(!instruction[15]) isAInstruction=true;    
-      
-      And(a=isCInstruction, b=instruction[5], out=isCWriteA);               // isCInstruction && dest==A
-      Or(a=isAInstruction, b=isCWriteA, out=loadA);                         // writeA if (A-instr || (isCInstruction && dest==A))
-      Mux16(a=instruction, b=outALU, sel=isCWriteA, out=inAReg);
-      ARegister(in=inAReg, load=loadA, out=outAreg, out[0..14]=addressM);   //outAreg==addressM 
-  
-      And(a=isCInstruction, b=instruction[4], out=loadD);                   // isCInstruction && dest==D
-      DRegister(in=outALU, load=loadD, out=outDReg);
-      
-      Mux16(a=outAreg, b=inM, sel=instruction[12], out=outAorM);            // A or M, sel=a (a bit selects A register)
-      
-      ALU(
-          x=outDReg,
-          y=outAorM,
-          zx=instruction[11],   // c1
-          nx=instruction[10],   // c2
-          zy=instruction[9],    // c3
-          ny=instruction[8],    // c4
-          f =instruction[7],    // c5
-          no=instruction[6],    // c6
-          out=outALU,
-          out=outM,
-          zr=isZeroOut,
-          ng=isNegOut
-        );
-          
-      // Set out flags and ProgramCounter
-      Not(in=isNegOut, out=isNonNeg);
-      Not(in=isZeroOut, out=isNonZero);
-      And(a=isNonNeg, b=isNonZero, out=isPositive); // is positive? !zero && !negative
-      
-      And(a=isCInstruction, b=instruction[3], out=writeM);  // write M? isCInstruction && dest==M
-      
-      And(a=isPositive, b=instruction[0], out=JGT);
-      And(a=isZeroOut, b=instruction[1], out=JEQ);
-      And(a=isNegOut, b=instruction[2], out=JLT);
-          
-      Or(a=JEQ, b=JLT, out=JLE);
-      Or(a=JLE, b=JGT, out=jumpToA);                  // is jump?
-      And(a=isCInstruction, b=jumpToA, out=loadPC);   // loadPC? if(isCInstruction && jump)
-      Not(in=loadPC, out=PCinc);
-      PC(in=outAreg, inc=PCinc, load=loadPC, reset=reset, out[0..14]=pc);
+CHIP CPU {
+
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset==1) or continue executing
+                         // the current program (reset==0).
+
+    OUT outM[16],        // M value output
+        writeM,          // Write to M? 
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+
+    PARTS:
+    // tipo A ou tipo C
+    Not(in=instruction[15], out=isTypeA);
+    Not(in=isTypeA, out=isTypeC);
+
+    // Registrador A recebe instrução pura (type A) ou saida da alu (type C)
+    Mux16(a=instruction, b=outALU, sel=instruction[15], out=toAReg);
+    
+    // Registrador A salva o dado se for Instrução A OU se for Instrução C com destino para A (bit 5)
+    And(a=isTypeC, b=instruction[5], out=destA);
+    Or(a=isTypeA, b=destA, out=loadA);
+    ARegister(in=toAReg, load=loadA, out=outA, out[0..14]=addressM);
+
+    // Registrador D recebe o resultado da ALU se for Instrução C E o destino for D (bit 4)
+    And(a=isTypeC, b=instruction[4], out=loadD);
+    DRegister(in=outALU, load=loadD, out=outD);
+
+    // bit 12 decide se vai usar o registrador A ou a ram
+    Mux16(a=outA, b=inM, sel=instruction[12], out=outAMux);
+
+    ALU(x=outD, y=outAMux, 
+        zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], 
+        out=outALU, out=outM, zr=zr, ng=ng);
+
+    // gravação na memória externa se for instrução C e o destino for M (bit 3)
+    And(a=isTypeC, b=instruction[3], out=writeM);
+
+    // resultado da ALU bate com o desejo de salto da instrução
+    // saída da ALU deu um número estritamente positivo
+    Or(a=zr, b=ng, out=zeroOrNeg);
+    Not(in=zeroOrNeg, out=pos);
+
+    And(a=instruction[0], b=pos, out=jgt);
+    And(a=instruction[1], b=zr,  out=jeq);
+    And(a=instruction[2], b=ng,  out=jlt);
+
+    // se qualquer condição de salto bater + trava de segurança
+    Or(a=jgt, b=jeq, out=jge);
+    Or(a=jge, b=jlt, out=jumpCond);
+    And(a=isTypeC, b=jumpCond, out=doJump);
+    
+    // se não pular, anda 1 linha para frente 
+    Not(in=doJump, out=doInc);
+
+    PC(in=outA, load=doJump, inc=doInc, reset=reset, out[0..14]=pc);
 }
